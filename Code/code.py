@@ -13,10 +13,17 @@ upper_green = np.array([150, 255, 150])
 # Remove pixels not in range
 green_image = cv2.inRange(img, lower_green, upper_green)
 
-# Perform openning to remove noise
-kernel = np.ones((6,6),np.uint8)
-openning = cv2.morphologyEx(green_image, cv2.MORPH_OPEN, kernel)
-res = cv2.bitwise_and(img, img, mask = openning)
+# Morphological operations
+# 	Open to remove background noise
+#	Dilate to remove foreground noise
+#	Erode to decrease size
+kernelOpen = np.ones((6,6),np.uint8)
+kernelDilate = np.ones((5,5),np.uint8)
+kernelErode = np.ones((3,3),np.uint8)
+openning = cv2.morphologyEx(green_image, cv2.MORPH_OPEN, kernelOpen)
+dilation = cv2.dilate(openning,kernelDilate,iterations = 1) 
+erosion = cv2.erode(dilation,kernelErode,iterations = 3)
+res = cv2.bitwise_and(img, img, mask = erosion)
 
 # Display images
 cv2.imshow('orignal',img)
