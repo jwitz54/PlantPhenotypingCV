@@ -29,17 +29,36 @@ kernelErode = np.ones((3,3),np.uint8)
 
 # Morph to remove noisee
 openning = cv2.morphologyEx(bw_image, cv2.MORPH_OPEN, kernelOpen, iterations = 1)
-dilation = cv2.dilate(openning,kernelDilate,iterations = 2) 
-erosion = cv2.erode(dilation,kernelErode,iterations = 3)
+dilation = cv2.dilate(openning,kernelDilate,iterations = 1) 
+erosion = cv2.erode(dilation,kernelErode,iterations = 4)
 
 # Distance transform to get centers 
-dist_transform = cv2.distanceTransform(openning,cv2.DIST_L2,3)
-dist_transform_norm = dist_transform
-cv2.normalize(dist_transform, dist_transform_norm, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX)
-print(dist_transform_norm)
-dist_transform_norm = dist_transform_norm.astype(np.uint8)
-thresh = cv2.adaptiveThreshold(dist_transform_norm,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,3,2)
+# dist_transform = cv2.distanceTransform(openning,cv2.DIST_L2,3)
+# dist_transform_norm = dist_transform
+# cv2.normalize(dist_transform, dist_transform_norm, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX)
+# dist_transform_norm = dist_transform_norm.astype(np.uint8)
+# thresh = cv2.adaptiveThreshold(dist_transform_norm,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,91,2)
+
+# Find contours
+im2, contours, hierarchy = cv2.findContours(erosion,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+
+# Separate and fill contours
+img_contours = []
+for i, c in enumerate(contours):
+	img_contour = np.zeros(img.shape)
+	img_contour = cv2.drawContours(img_contour, contours, i, (255,255,255), 3)
+	img_contour = cv2.fillPoly(img_contour, pts = [contours[i]], color = (255,255,255))
+	img_contours.append(img_contour)
+
+# Distance transform and then threshold individual leaves
+for i, ic in enumerate(img_contours):
+	ic = ic.astype(np.uint8)
+	dist_transform = cv2.distanceTransform(ic,cv2.DIST_L2,3)
+	dist_transform_norm = dist_transform
+	cv2.normalize(dist_transform, dist_transform_norm, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX)
+	dist_transform_norm = dist_transform_norm.astype(np.uint8)
 
 # Display images
-cv2.imshow('res', thresh)
+cv2.imshow('di', dist_transform_norm)
+# cv2.imshow('res', thresh)
 cv2.waitKey(0)
