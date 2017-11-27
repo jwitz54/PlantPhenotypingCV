@@ -58,15 +58,12 @@ for i, ic in enumerate(img_contours):
 
 # Perform region growing
 ret, markers = cv2.connectedComponents(leave_centers)
-markers = markers+1
-# markers[unknown==255] = 0
+# markers = markers+1
+# markers[leave_centers==0] = 0
 markers = cv2.watershed(img,markers)
 img[markers == -1] = [255,0,0]
-markers_norm = markers
-cv2.normalize(markers, markers_norm, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX)
-markers_norm = markers_norm.astype(np.uint8)
 
 # Display images
 cv2.imshow('di', markers)
-# cv2.imshow('res', thresh)
+cv2.imshow('di', img)
 cv2.waitKey(0)
