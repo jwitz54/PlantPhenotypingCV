@@ -1,3 +1,7 @@
+"""
+Python bash wrapper script that runs 'code.py' on each file in the Images directory
+"""
+
 import subprocess
 import os
 import sys

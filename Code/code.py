@@ -1,3 +1,13 @@
+"""
+Script that applies morphological filtering and watershed algorithm to an image.
+Input image is specified as a command line input and stored in argv
+
+An arbitrary number of morphological filtering (and any other preprocessing algorithm)
+can be applied to the image before the watershed algorithm is applied
+
+TODO: incorporate scoring functionality and output scoring statistics to .txt file
+"""
+
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
@@ -7,12 +17,9 @@ np.set_printoptions(threshold=np.nan)
 def main(fname):
 	# -------------SEGMENTATION--------------
 	# Read file
-	#img = cv2.imread('../Images/plant2.png')
 	img = cv2.imread('../Images/' + fname)
 	img_orig = np.copy(img)
-	#cv2.imshow('o',img)
-	#cv2.waitKey(0)
-
+	
 	# Set lower and upper green values
 	lower_green = np.array([0, 150, 0])
 	upper_green = np.array([150, 255, 150])
@@ -20,6 +27,7 @@ def main(fname):
 	# Remove pixels not in range
 	bw_image = cv2.inRange(img, lower_green, upper_green)
 
+	# -------- DEFINE MORPHOLOGICAL FILTERING COMBOS BELOW ------- #
 
 	# -------------- MORPH 1 --------------
 	# dilation, erosion, opening
@@ -57,13 +65,12 @@ def main(fname):
 
 	morphed_img3 = erosion3
 
+	# get outputs for each combo
 	markers1, img1, leave_centers1, contours1 = get_centers(img_orig,morphed_img1,bw_image)
 	markers2, img2, leave_centers2, contours2 = get_centers(img_orig,morphed_img2,bw_image)
 	markers3, img3, leave_centers3, contours3 = get_centers(img_orig,morphed_img3,bw_image)
 	
 	# Display images
-	#cv2.imshow('markers', markers)
-	#cv2.waitKey(0)
 	cv2.imshow('original', img_orig)
 	cv2.waitKey(0)
 	cv2.imshow('original bw', bw_image)
@@ -74,24 +81,13 @@ def main(fname):
 	cv2.waitKey(0)
 	cv2.imshow('img D-O-E', img3)
 	cv2.waitKey(0)
-	#cv2.imshow('centers D-E-O', leave_centers1)
-	#cv2.waitKey(0)
-	#cv2.imshow('centers O-D-E', leave_centers2)
-	#cv2.waitKey(0)
-
-	#cv2.imshow('bw', bw_image)
-	#cv2.waitKey(0)
-
-	#cv2.imshow('dilation', dilation)
-	#cv2.waitKey(0)
-	#cv2.imshow('erosion', erosion)
-	#cv2.waitKey(0)
-	#cv2.imshow('opening', openning)
-	#cv2.waitKey(0)
 	
 	sys.exit()
 
 def get_centers(img,morphed_img,bw_image):
+	"""
+	Find contours and apply Watershed algorithm to morphologically filtered binary image
+	"""
 	# Find contours
 	im2, contours, hierarchy = cv2.findContours(morphed_img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
@@ -128,10 +124,9 @@ def get_centers(img,morphed_img,bw_image):
 	# markers = markers+1
 	# markers[leave_centers==0] = 0
 	markers = cv2.watershed(img,markers)
-	#print 'type',type(img)
-	#cv2.imshow('o',img)
-	#cv2.waitKey(0)
-	img_marked = np.copy(img)
+
+	#copy to new np array to preserve original image and allow for multiple combinations
+	img_marked = np.copy(img)	
 	img_marked[markers == -1] = [255,0,0]
 
 	return markers, img_marked, leave_centers, contours
