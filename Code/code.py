@@ -12,13 +12,16 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 import sys
+import csv
 
 np.set_printoptions(threshold=np.nan)
-def main(fname):
+def main(fid):
 	# -------------SEGMENTATION--------------
-	# Read file
-	img = cv2.imread('../Images/' + fname)
+	# Read files
+	img = cv2.imread('../Images/orig/orig' + fid + '.png')
 	img_orig = np.copy(img)
+
+	img_ground = cv2.imread('../Images/truth/truth' + fid + '.png')
 	
 	# Set lower and upper green values
 	lower_green = np.array([0, 150, 0])
@@ -65,11 +68,37 @@ def main(fname):
 
 	morphed_img3 = erosion3
 
+	# -------------- MORPH 4 --------------
+	kernelMean4 = np.ones((3,3),np.float32)/9	#low pass
+	kernelDilate4 = np.ones((5,5),np.uint8)
+	kernelErode4 = np.ones((3,3),np.uint8)
+	mean4 = cv2.filter2D(bw_image,-1,kernelMean4)
+	dilation4 = cv2.dilate(mean4,kernelDilate4,iterations = 1) 
+	erosion4 = cv2.erode(dilation4,kernelErode4,iterations = 4)
+
+	morphed_img4 = erosion4
+
 	# get outputs for each combo
 	markers1, img1, leave_centers1, contours1 = get_centers(img_orig,morphed_img1,bw_image)
 	markers2, img2, leave_centers2, contours2 = get_centers(img_orig,morphed_img2,bw_image)
 	markers3, img3, leave_centers3, contours3 = get_centers(img_orig,morphed_img3,bw_image)
+	markers4, img4, leave_centers4, contours4 = get_centers(img_orig,morphed_img4,bw_image)
 	
+	# score each image and record
+	score1 = 1#score_image(img1, markers1, img_ground)
+	score2 = 2#score_image(img2, markers2, img_ground)
+	score3 = 3#score_image(img3, markers3, img_ground)
+	score4 = 4#score_image(img4, markers4, img_ground)
+	
+	scores = [score1,score2,score3,score4]
+	scores = [str(x) for x in scores]
+	data = [fid] + scores
+
+	#append score to scores.csv
+	with open('../scores.csv','a') as fin:
+		writer = csv.writer(fin)
+		writer.writerow(data)
+
 	# Display images
 	cv2.imshow('original', img_orig)
 	cv2.waitKey(0)
@@ -80,6 +109,8 @@ def main(fname):
 	cv2.imshow('img O-D-E', img2)
 	cv2.waitKey(0)
 	cv2.imshow('img D-O-E', img3)
+	cv2.waitKey(0)
+	cv2.imshow('img M-D-E', img4)
 	cv2.waitKey(0)
 	
 	sys.exit()
@@ -132,8 +163,13 @@ def get_centers(img,morphed_img,bw_image):
 	return markers, img_marked, leave_centers, contours
 
 if __name__ == "__main__":
+	"""Driver"""
 	if len(sys.argv) < 2:
-		print 'Please specify an image filename'
+		print 'Please specify an image ID'
 		sys.exit()
+	try:
+		int(sys.argv[1])
+	except:
+		print 'Specify the image ID as a positive integer between 1 and 186'
 
 	main(sys.argv[1])
