@@ -13,7 +13,8 @@ except:
     pass
 
 #for filename in os.listdir('../Images'):
-for i in range(1,186+1):
+# for i in range(1,186+1):
+for i in range(1,159+1):
     try:
         print i
         bashCommand = 'python code.py %s' % str(i)
