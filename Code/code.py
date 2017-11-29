@@ -85,10 +85,10 @@ def main(fid):
 	markers4, img4, leave_centers4, contours4 = get_centers(img_orig,morphed_img4,bw_image)
 	
 	# score each image and record
-	score1 = 1#score_image(img1, markers1, img_ground)
-	score2 = 2#score_image(img2, markers2, img_ground)
-	score3 = 3#score_image(img3, markers3, img_ground)
-	score4 = 4#score_image(img4, markers4, img_ground)
+	score1 = scoreImg(markers1, img_ground)
+	score2 = scoreImg(markers2, img_ground)
+	score3 = scoreImg(markers3, img_ground)
+	score4 = scoreImg(markers4, img_ground)
 	
 	scores = [score1,score2,score3,score4]
 	scores = [str(x) for x in scores]
@@ -100,6 +100,7 @@ def main(fid):
 		writer.writerow(data)
 
 	# Display images
+	"""
 	cv2.imshow('original', img_orig)
 	cv2.waitKey(0)
 	cv2.imshow('original bw', bw_image)
@@ -112,6 +113,7 @@ def main(fid):
 	cv2.waitKey(0)
 	cv2.imshow('img M-D-E', img4)
 	cv2.waitKey(0)
+	"""
 	
 	sys.exit()
 
@@ -152,15 +154,118 @@ def get_centers(img,morphed_img,bw_image):
 
 	# Perform region growing
 	ret, markers = cv2.connectedComponents(leave_centers)
-	# markers = markers+1
-	# markers[leave_centers==0] = 0
+	
 	markers = cv2.watershed(img,markers)
+
+	# print (markers)
+	# markers = markers+1
+	# markers = markers*20
+	# markers = markers.astype(np.uint8)
+	# cv2.imshow("marker", markers)
+
+
+	# cv2.applyColorMap(markers,imC, cv2.COLORMAP_JET)
+	# print (markers)
+	# cv2.imshow("yay", img)
+	# cv2.waitKey(0)
+	# print (markers)
+	
 
 	#copy to new np array to preserve original image and allow for multiple combinations
 	img_marked = np.copy(img)	
 	img_marked[markers == -1] = [255,0,0]
 
 	return markers, img_marked, leave_centers, contours
+
+def scoreImg(markers, truth):
+	# # Read file
+	# truth = cv2.imread('../Images/truth/truth' + picNumber + '.png')
+	# truth_orig = np.copy(truth)
+
+	# cv2.imshow("Truth", truth)
+	# cv2.waitKey(0)
+
+	set1 = set( tuple(v) for m2d in truth for v in m2d ) # change this line/understand it better
+	# print (set1)
+	set1.discard((0,0,0))
+
+	maxDiceArray = []
+	for color in set1:
+		newLeaf = np.all(truth == color, axis=-1)
+
+		# img debug 
+		"""
+		newLeaf1 = newLeaf
+		newLeaf1 = newLeaf1 * 250
+		newLeaf1 = newLeaf1 + 1
+		newLeaf1 = newLeaf1.astype(np.uint8)
+		cv2.imshow("wow", newLeaf1)
+		cv2.waitKey(0)
+
+		"""
+
+
+		# truthBoolLeaf = np.asarray(newLeaf).astype(np.bool)
+		truthBoolLeaf = newLeaf.astype(np.bool)
+		# print("truth bool leaf")
+		# print (truthBoolLeaf)
+
+		data = np.unique(markers)
+		diceArray = []
+
+		# print ("YAYAYAYAYAYYAY")
+		# print (markers)
+		for label in np.unique(markers):
+			# print("label: {}", label)
+			testLeaf = (markers == label)
+
+			# img debug######
+			# testLeaf1 = testLeaf
+			# testLeaf1 = testLeaf1 * 250
+			# testLeaf1 = testLeaf1 + 1
+			# testLeaf1 = testLeaf1.astype(np.uint8)
+			# cv2.imshow("test test", testLeaf1)
+			# cv2.waitKey(0)
+			########
+
+			testBoolLeaf = testLeaf.astype(np.bool)
+
+			union = np.logical_and(truthBoolLeaf, testBoolLeaf)
+
+			# print ("UNION WOOH")
+			# print (union.sum())
+			# print (truthBoolLeaf.sum())
+			# print(testBoolLeaf.sum())
+
+			# total = (2*union.sum())/float((truthBoolLeaf.sum() + testBoolLeaf.sum()))
+			# print(total)
+
+			diceArray.append(2*union.sum()/float((truthBoolLeaf.sum() + testBoolLeaf.sum())))
+
+		# print ("color: {} and dice".format(color))
+		# print (diceArray)
+		# print (max(diceArray))
+		maxDiceArray.append(max(diceArray))
+
+		# print(newLeaf)
+
+		# newLeaf = np.copy(truth)
+		# for i in range(len(newLeaf)):
+		# 	# print (newLeaf[i])
+		# 	# print(color)
+		# 	if (cmp(newLeaf[i],color) == 1):
+		# 		newLeaf[i] = [255,255,255]
+		# 	else:
+		# 		newLeaf[i] = [0,0,0]
+		
+		# print(np.where(newLeaf == color))
+		# newLeaf[np.where(newLeaf == color)] = [255, 255, 255]
+		# newLeaf[color] = [255,0,0]
+	# print (maxDiceArray)
+	print (np.mean(maxDiceArray))
+	return np.mean(maxDiceArray)
+
+
 
 if __name__ == "__main__":
 	"""Driver"""
