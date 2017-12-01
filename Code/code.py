@@ -13,6 +13,7 @@ import cv2
 from matplotlib import pyplot as plt
 import sys
 import csv
+import os
 
 np.set_printoptions(threshold=np.nan)
 def main(fid):
@@ -91,7 +92,8 @@ def main(fid):
 	score4 = scoreImg(markers4, img_ground)
 	
 	scores = [score1,score2,score3,score4]
-	scores = [j for i in scores for j in i] #flatten 2D list
+	if type(scores[0]) == list:
+		scores = [j for i in scores for j in i] #flatten 2D list
 	scores = [str(x) for x in scores]
 	data = [fid] + scores
 
@@ -100,21 +102,42 @@ def main(fid):
 		writer = csv.writer(fin)
 		writer.writerow(data)
 
-	# Display images
-	"""
-	cv2.imshow('original', img_orig)
-	cv2.waitKey(0)
-	cv2.imshow('original bw', bw_image)
-	cv2.waitKey(0)
-	cv2.imshow('img D-E-O', img1)
-	cv2.waitKey(0)
-	cv2.imshow('img O-D-E', img2)
-	cv2.waitKey(0)
-	cv2.imshow('img D-O-E', img3)
-	cv2.waitKey(0)
-	cv2.imshow('img M-D-E', img4)
-	cv2.waitKey(0)
-	"""
+	# Display and save images
+	if sys.argv[2] == '-w':
+		directory = '../images' + sys.argv[1]
+		if not os.path.exists(directory):
+			os.makedirs(directory)
+
+		
+		cv2.imshow('original', img_orig)
+		cv2.waitKey(0)
+		cv2.imshow('original bw', bw_image)
+		cv2.waitKey(0)
+		cv2.imshow('img D-E-O', img1)
+		cv2.imwrite(directory + '/im1_1.png',dilation1)
+		cv2.imwrite(directory + '/im1_2.png',erosion1)
+		cv2.imwrite(directory + '/im1_3.png',opening1)
+		cv2.imwrite(directory + '/im1_4.png',img1)
+		cv2.waitKey(0)
+		cv2.imshow('img O-D-E', img2)
+		cv2.imwrite(directory + '/im2_1.png',opening2)
+		cv2.imwrite(directory + '/im2_2.png',dilation2)
+		cv2.imwrite(directory + '/im2_3.png',erosion2)
+		cv2.imwrite(directory + '/im2_4.png',img2)
+		cv2.waitKey(0)
+		cv2.imshow('img D-O-E', img3)
+		cv2.imwrite(directory + '/im3_1.png',dilation3)
+		cv2.imwrite(directory + '/im3_2.png',opening3)
+		cv2.imwrite(directory + '/im3_3.png',erosion3)
+		cv2.imwrite(directory + '/im3_4.png',img3)
+		cv2.waitKey(0)
+		cv2.imshow('img M-D-E', img4)
+		cv2.imwrite(directory + '/im4_1.png',mean4)
+		cv2.imwrite(directory + '/im4_2.png',dilation4)
+		cv2.imwrite(directory + '/im4_3.png',erosion4)
+		cv2.imwrite(directory + '/im4_4.png',img4)
+		cv2.waitKey(0)
+	
 	
 	sys.exit()
 
