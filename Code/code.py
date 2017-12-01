@@ -178,13 +178,10 @@ def get_centers(img,morphed_img,bw_image):
 	return markers, img_marked, leave_centers, contours
 
 def scoreImg(markers, truth):
-	# # Read file
-	# truth = cv2.imread('../Images/truth/truth' + picNumber + '.png')
-	# truth_orig = np.copy(truth)
-
-	# cv2.imshow("Truth", truth)
-	# cv2.waitKey(0)
-
+	"""
+	Takes in labeled image and ground truth image and computes the Dice coeffeicient between them
+	1: Returns the mean
+	"""
 	set1 = set( tuple(v) for m2d in truth for v in m2d ) # change this line/understand it better
 	# print (set1)
 	set1.discard((0,0,0))
