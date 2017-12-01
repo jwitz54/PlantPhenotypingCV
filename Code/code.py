@@ -103,7 +103,7 @@ def main(fid):
 		writer.writerow(data)
 
 	# Display and save images
-	if sys.argv[2] == '-w':
+	if len(sys.argv) > 2 and sys.argv[2] == '-w':
 		directory = '../images' + sys.argv[1]
 		if not os.path.exists(directory):
 			os.makedirs(directory)

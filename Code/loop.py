@@ -25,10 +25,11 @@ def main():
             #raw_input('Process next image...')
         except KeyboardInterrupt:
             print 'Exiting...'
-            sys.exit()
+            break
 
     dst = '../scores' + sys.argv[1] + '.csv'
     shutil.copyfile('../scores.csv',dst)
+    sys.exit()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
