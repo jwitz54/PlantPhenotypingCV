@@ -25,8 +25,8 @@ def main(fid):
 	img_ground = cv2.imread('../Images/truth/truth' + fid + '.png')
 	
 	# Set lower and upper green values
-	lower_green = np.array([0, 150, 0])
-	upper_green = np.array([150, 255, 150])
+	lower_green = np.array([0, 160, 0])
+	upper_green = np.array([60, 255, 130])
 
 	# Remove pixels not in range
 	bw_image = cv2.inRange(img, lower_green, upper_green)
@@ -48,12 +48,17 @@ def main(fid):
 	# -------------- MORPH 2 --------------
 	# opening, dilation, erosion
 	# Define kernels
-	kernelOpen2 = np.ones((6,6),np.uint8)
-	kernelDilate2 = np.ones((5,5),np.uint8)
+	kernelOpen2 = np.ones((2,2),np.uint8)
+	kernelDilate2 = np.ones((3,3),np.uint8)
 	kernelErode2 = np.ones((3,3),np.uint8)
-	opening2 = cv2.morphologyEx(bw_image, cv2.MORPH_OPEN, kernelOpen2, iterations = 1)
-	dilation2 = cv2.dilate(opening2,kernelDilate2,iterations = 1) 
+	opening2 = cv2.morphologyEx(bw_image, cv2.MORPH_OPEN, kernelOpen2, iterations = 2)
+	dilation2 = cv2.dilate(opening2,kernelDilate2,iterations = 2) 
 	erosion2 = cv2.erode(dilation2,kernelErode2,iterations = 4)
+	# cv2.imshow("bw", bw_image)
+	# cv2.imshow("open", opening2)
+	# cv2.imshow("dilate", dilation2)
+	# cv2.imshow("erode", erosion2)
+	# cv2.waitKey(0)
 
 	morphed_img2 = erosion2
 
@@ -61,11 +66,17 @@ def main(fid):
 	# dilation, opening, erosion
 	# Define kernels
 	kernelOpen3 = np.ones((12,12),np.uint8)
-	kernelDilate3 = np.ones((3,3),np.uint8)
+	kernelDilate3 = np.ones((5,5),np.uint8)
 	kernelErode3 = np.ones((3,3),np.uint8)
 	dilation3 = cv2.dilate(bw_image,kernelDilate3,iterations = 1)
+	dilation3 = cv2.dilate(dilation3,np.ones((2,2),np.uint8),iterations = 2)
 	opening3 = cv2.morphologyEx(dilation3, cv2.MORPH_OPEN, kernelOpen3, iterations = 1)
 	erosion3 = cv2.erode(opening3,kernelErode3,iterations = 4)
+	# cv2.imshow("bw2", bw_image)
+	# cv2.imshow("open2", opening3)
+	# cv2.imshow("dilate", dilation3)
+	# cv2.imshow("erode", erosion3)
+	# cv2.waitKey(0)
 
 	morphed_img3 = erosion3
 
@@ -84,6 +95,8 @@ def main(fid):
 	markers2, img2, leave_centers2, contours2 = get_centers(img_orig,morphed_img2,bw_image)
 	markers3, img3, leave_centers3, contours3 = get_centers(img_orig,morphed_img3,bw_image)
 	markers4, img4, leave_centers4, contours4 = get_centers(img_orig,morphed_img4,bw_image)
+	# cv2.imshow("centers3", leave_centers3)
+	# cv2.waitKey(0)
 	
 	# score each image and record
 	score1 = scoreImg(markers1, img_ground)
@@ -92,18 +105,19 @@ def main(fid):
 	score4 = scoreImg(markers4, img_ground)
 	
 	scores = [score1,score2,score3,score4]
+	# scores = [score3]
 	if type(scores[0]) == list:
 		scores = [j for i in scores for j in i] #flatten 2D list
 	scores = [str(x) for x in scores]
 	data = [fid] + scores
 
-	#append score to scores.csv
+	# append score to scores.csv
 	with open('../scores.csv','a') as fin:
 		writer = csv.writer(fin)
 		writer.writerow(data)
 
 	# Display and save images
-	if sys.argv[2] == '-w':
+	if len(sys.argv) > 2 and sys.argv[2] == '-w':
 		directory = '../images' + sys.argv[1]
 		if not os.path.exists(directory):
 			os.makedirs(directory)
@@ -172,32 +186,43 @@ def get_centers(img,morphed_img,bw_image):
 		dist_transform_norm = dist_transform_norm.astype(np.uint8)
 
 		# Threshold and OR images
-		ret,thresh1 = cv2.threshold(dist_transform_norm,210,255,cv2.THRESH_BINARY)
+		ret,thresh1 = cv2.threshold(dist_transform_norm,170,255,cv2.THRESH_BINARY)
+		# cv2.imshow("thresh1", dist_transform_norm)
 		thresh1 = thresh1.astype(np.uint8)
 		leave_centers = cv2.bitwise_or(leave_centers, thresh1)
 
 	# Perform region growing
 	ret, markers = cv2.connectedComponents(leave_centers)
 	
-	markers = cv2.watershed(img,markers)
+	# Reduce noise of input image via thresholding
+	# lower_green = np.array([0, 150, 0])
+	# upper_green = np.array([150, 255, 150])
+	lower_green = np.array([0, 120, 0])
+	upper_green = np.array([100, 255, 142])
+	bw = cv2.inRange(img, lower_green, upper_green)
+	img_noise_reduction = cv2.bitwise_and(img, img, mask = bw)
+	# cv2.imshow("noise", img_noise_reduction)
 
-	# print (markers)
-	# markers = markers+1
-	# markers = markers*20
-	# markers = markers.astype(np.uint8)
-	# cv2.imshow("marker", markers)
+	# markers1 = markers + 1
+	# markers1 = markers1 * 20
+	# markers1 = markers1.astype(np.uint8)
+	# cv2.imshow("marker", markers1)
 
-
-	# cv2.applyColorMap(markers,imC, cv2.COLORMAP_JET)
-	# print (markers)
-	# cv2.imshow("yay", img)
-	# cv2.waitKey(0)
-	# print (markers)
+	markers[2][2] = 30
+	markers = cv2.watershed(img_noise_reduction,markers)
 	
 
 	#copy to new np array to preserve original image and allow for multiple combinations
 	img_marked = np.copy(img)	
 	img_marked[markers == -1] = [255,0,0]
+	# cv2.imshow("markers", leave_centers)
+	# cv2.imshow("red", img_noise_reduction)
+	# markers1 = markers + 1
+	# markers1 = markers1 * 20
+	# markers1 = markers1.astype(np.uint8)
+	# cv2.imshow("marked", )
+	# cv2.imshow("markers", markers1)
+	cv2.waitKey(0)
 
 	return markers, img_marked, leave_centers, contours
 
