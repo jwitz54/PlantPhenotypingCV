@@ -91,6 +91,7 @@ def main(fid):
 	score4 = scoreImg(markers4, img_ground)
 	
 	scores = [score1,score2,score3,score4]
+	scores = [j for i in scores for j in i] #flatten 2D list
 	scores = [str(x) for x in scores]
 	data = [fid] + scores
 
