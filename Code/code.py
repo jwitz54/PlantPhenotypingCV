@@ -1,11 +1,15 @@
 """
-Script that applies morphological filtering and watershed algorithm to an image.
-Input image is specified as a command line input and stored in argv
+Script that applies morphological filtering and watershed algorithm to an image 
+to separate leaves in the image. Each leaf is individually scored against ground
+truth. The mean of all the leaves in the image is taken as the image's score.abs
 
-An arbitrary number of morphological filtering (and any other preprocessing algorithm)
-can be applied to the image before the watershed algorithm is applied
+Command line usage: "python code.py id -w"
+						  where id specified the ID of the input and ground truth image
+						  to be read from ../Images/orig and ../Images/truth, 
+						  respectively. The -w flag writes all of the intermediate
+						  images to a folder corresponding to the image ID.
 
-TODO: incorporate scoring functionality and output scoring statistics to .txt file
+Developed for ECE 5470 Fall 2017 by Jeff Witz, Curran Sinha, and Cameron Schultz
 """
 
 import numpy as np
@@ -17,6 +21,9 @@ import os
 
 np.set_printoptions(threshold=np.nan)
 def main(fid):
+	"""
+	main driver function
+	"""
 	# -------------SEGMENTATION--------------
 	# Read files
 	img = cv2.imread('../Images/orig/orig' + fid + '.png')
@@ -36,9 +43,9 @@ def main(fid):
 	# -------------- MORPH 1 --------------
 	# dilation, erosion, opening
 	# Define kernels
-	kernelOpen1 = np.ones((6,6),np.uint8)
 	kernelDilate1 = np.ones((5,5),np.uint8)
 	kernelErode1 = np.ones((3,3),np.uint8)
+	kernelOpen1 = np.ones((6,6),np.uint8)
 	dilation1 = cv2.dilate(bw_image,kernelDilate1,iterations = 1) 
 	erosion1 = cv2.erode(dilation1,kernelErode1,iterations = 4)
 	opening1 = cv2.morphologyEx(erosion1, cv2.MORPH_OPEN, kernelOpen1, iterations = 1)
@@ -54,16 +61,11 @@ def main(fid):
 	opening2 = cv2.morphologyEx(bw_image, cv2.MORPH_OPEN, kernelOpen2, iterations = 2)
 	dilation2 = cv2.dilate(opening2,kernelDilate2,iterations = 2) 
 	erosion2 = cv2.erode(dilation2,kernelErode2,iterations = 4)
-	# cv2.imshow("bw", bw_image)
-	# cv2.imshow("open", opening2)
-	# cv2.imshow("dilate", dilation2)
-	# cv2.imshow("erode", erosion2)
-	# cv2.waitKey(0)
-
+	
 	morphed_img2 = erosion2
 
 	# -------------- MORPH 3 --------------
-	# dilation, opening, erosion
+	# dilation x 2, opening, erosion
 	# Define kernels
 	kernelOpen3 = np.ones((12,12),np.uint8)
 	kernelDilate3 = np.ones((5,5),np.uint8)
@@ -72,15 +74,12 @@ def main(fid):
 	dilation3 = cv2.dilate(dilation3,np.ones((2,2),np.uint8),iterations = 2)
 	opening3 = cv2.morphologyEx(dilation3, cv2.MORPH_OPEN, kernelOpen3, iterations = 1)
 	erosion3 = cv2.erode(opening3,kernelErode3,iterations = 4)
-	# cv2.imshow("bw2", bw_image)
-	# cv2.imshow("open2", opening3)
-	# cv2.imshow("dilate", dilation3)
-	# cv2.imshow("erode", erosion3)
-	# cv2.waitKey(0)
-
+	
 	morphed_img3 = erosion3
 
 	# -------------- MORPH 4 --------------
+	# mean filter, dilation, erosion
+	# Define kernels
 	kernelMean4 = np.ones((3,3),np.float32)/9	#low pass
 	kernelDilate4 = np.ones((5,5),np.uint8)
 	kernelErode4 = np.ones((3,3),np.uint8)
@@ -90,13 +89,11 @@ def main(fid):
 
 	morphed_img4 = erosion4
 
-	# get outputs for each combo
+	# get centers for each combo
 	markers1, img1, leave_centers1, contours1 = get_centers(img_orig,morphed_img1,bw_image)
 	markers2, img2, leave_centers2, contours2 = get_centers(img_orig,morphed_img2,bw_image)
 	markers3, img3, leave_centers3, contours3 = get_centers(img_orig,morphed_img3,bw_image)
 	markers4, img4, leave_centers4, contours4 = get_centers(img_orig,morphed_img4,bw_image)
-	# cv2.imshow("centers3", leave_centers3)
-	# cv2.waitKey(0)
 	
 	# score each image and record
 	score1 = scoreImg(markers1, img_ground)
@@ -105,7 +102,7 @@ def main(fid):
 	score4 = scoreImg(markers4, img_ground)
 	
 	scores = [score1,score2,score3,score4]
-	# scores = [score3]
+
 	if type(scores[0]) == list:
 		scores = [j for i in scores for j in i] #flatten 2D list
 	scores = [str(x) for x in scores]
@@ -116,43 +113,43 @@ def main(fid):
 		writer = csv.writer(fin)
 		writer.writerow(data)
 
-	# Display and save images
+	# Display and save images if -w flag set
 	if len(sys.argv) > 2 and sys.argv[2] == '-w':
 		directory = '../images' + sys.argv[1]
+		# create unique directory if DNE
 		if not os.path.exists(directory):
 			os.makedirs(directory)
 
-		
 		cv2.imshow('original', img_orig)
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 		cv2.imshow('original bw', bw_image)
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 		cv2.imshow('img D-E-O', img1)
 		cv2.imwrite(directory + '/im1_1.png',dilation1)
 		cv2.imwrite(directory + '/im1_2.png',erosion1)
 		cv2.imwrite(directory + '/im1_3.png',opening1)
 		cv2.imwrite(directory + '/im1_4.png',img1)
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 		cv2.imshow('img O-D-E', img2)
 		cv2.imwrite(directory + '/im2_1.png',opening2)
 		cv2.imwrite(directory + '/im2_2.png',dilation2)
 		cv2.imwrite(directory + '/im2_3.png',erosion2)
 		cv2.imwrite(directory + '/im2_4.png',img2)
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 		cv2.imshow('img D-O-E', img3)
 		cv2.imwrite(directory + '/im3_1.png',dilation3)
 		cv2.imwrite(directory + '/im3_2.png',opening3)
 		cv2.imwrite(directory + '/im3_3.png',erosion3)
 		cv2.imwrite(directory + '/im3_4.png',img3)
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 		cv2.imshow('img M-D-E', img4)
 		cv2.imwrite(directory + '/im4_1.png',mean4)
 		cv2.imwrite(directory + '/im4_2.png',dilation4)
 		cv2.imwrite(directory + '/im4_3.png',erosion4)
 		cv2.imwrite(directory + '/im4_4.png',img4)
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 	
-	
+	# exit Python otherwise figure windows 'hang'
 	sys.exit()
 
 def get_centers(img,morphed_img,bw_image):
@@ -195,35 +192,21 @@ def get_centers(img,morphed_img,bw_image):
 	ret, markers = cv2.connectedComponents(leave_centers)
 	
 	# Reduce noise of input image via thresholding
-	# lower_green = np.array([0, 150, 0])
-	# upper_green = np.array([150, 255, 150])
 	lower_green = np.array([0, 120, 0])
 	upper_green = np.array([100, 255, 142])
 	bw = cv2.inRange(img, lower_green, upper_green)
 	img_noise_reduction = cv2.bitwise_and(img, img, mask = bw)
 	# cv2.imshow("noise", img_noise_reduction)
 
-	# markers1 = markers + 1
-	# markers1 = markers1 * 20
-	# markers1 = markers1.astype(np.uint8)
-	# cv2.imshow("marker", markers1)
+	markers[2][2] = 30 #set dummy marker to prevent outline of image from being marked
 
-	markers[2][2] = 30
+	#pass markers into watershed
 	markers = cv2.watershed(img_noise_reduction,markers)
 	
-
 	#copy to new np array to preserve original image and allow for multiple combinations
 	img_marked = np.copy(img)	
 	img_marked[markers == -1] = [255,0,0]
-	# cv2.imshow("markers", leave_centers)
-	# cv2.imshow("red", img_noise_reduction)
-	# markers1 = markers + 1
-	# markers1 = markers1 * 20
-	# markers1 = markers1.astype(np.uint8)
-	# cv2.imshow("marked", )
-	# cv2.imshow("markers", markers1)
-	cv2.waitKey(0)
-
+	
 	return markers, img_marked, leave_centers, contours
 
 def scoreImg(markers, truth):
@@ -231,87 +214,42 @@ def scoreImg(markers, truth):
 	Takes in labeled image and ground truth image and computes the Dice coeffeicient between them
 	1: Returns the mean
 	"""
-	set1 = set( tuple(v) for m2d in truth for v in m2d ) # change this line/understand it better
-	# print (set1)
+	# get set of all unique color tuples in ground truth image
+	set1 = set( tuple(j) for i in truth for j in i )
 	set1.discard((0,0,0))
 
 	maxDiceArray = []
+	# compute Dice coeff for each unique color in the ground truth image
 	for color in set1:
+		# isolate color from iamge
 		newLeaf = np.all(truth == color, axis=-1)
 
-		# img debug 
-		"""
-		newLeaf1 = newLeaf
-		newLeaf1 = newLeaf1 * 250
-		newLeaf1 = newLeaf1 + 1
-		newLeaf1 = newLeaf1.astype(np.uint8)
-		cv2.imshow("wow", newLeaf1)
-		cv2.waitKey(0)
-
-		"""
-
-
-		# truthBoolLeaf = np.asarray(newLeaf).astype(np.bool)
+		# convert to boolean type
 		truthBoolLeaf = newLeaf.astype(np.bool)
-		# print("truth bool leaf")
-		# print (truthBoolLeaf)
-
+		
+		# get set of all unique grayscale colors in markers
 		data = np.unique(markers)
 		diceArray = []
 
-		# print ("YAYAYAYAYAYYAY")
-		# print (markers)
+		# for each unique detected leaf		
 		for label in np.unique(markers):
-			# print("label: {}", label)
+			# isolate detected leaf from image
 			testLeaf = (markers == label)
 
-			# img debug######
-			# testLeaf1 = testLeaf
-			# testLeaf1 = testLeaf1 * 250
-			# testLeaf1 = testLeaf1 + 1
-			# testLeaf1 = testLeaf1.astype(np.uint8)
-			# cv2.imshow("test test", testLeaf1)
-			# cv2.waitKey(0)
-			########
-
+			# convert to boolean type
 			testBoolLeaf = testLeaf.astype(np.bool)
 
+			# compute union between ground truth leaf and detected leaf
 			union = np.logical_and(truthBoolLeaf, testBoolLeaf)
 
-			# print ("UNION WOOH")
-			# print (union.sum())
-			# print (truthBoolLeaf.sum())
-			# print(testBoolLeaf.sum())
-
-			# total = (2*union.sum())/float((truthBoolLeaf.sum() + testBoolLeaf.sum()))
-			# print(total)
-
+			# append Dice coeff for this leaf to diceArray
 			diceArray.append(2*union.sum()/float((truthBoolLeaf.sum() + testBoolLeaf.sum())))
 
-		# print ("color: {} and dice".format(color))
-		# print (diceArray)
-		# print (max(diceArray))
+		# The detected leaf with the highest Dice coefficient with the 
+		# ground truth leaf is the most likely match
 		maxDiceArray.append(max(diceArray))
 
-		# print(newLeaf)
-
-		# newLeaf = np.copy(truth)
-		# for i in range(len(newLeaf)):
-		# 	# print (newLeaf[i])
-		# 	# print(color)
-		# 	if (cmp(newLeaf[i],color) == 1):
-		# 		newLeaf[i] = [255,255,255]
-		# 	else:
-		# 		newLeaf[i] = [0,0,0]
-		
-		# print(np.where(newLeaf == color))
-		# newLeaf[np.where(newLeaf == color)] = [255, 255, 255]
-		# newLeaf[color] = [255,0,0]
-	# print (maxDiceArray)
-	print (np.mean(maxDiceArray))
 	return np.mean(maxDiceArray)
-
-
 
 if __name__ == "__main__":
 	"""Driver"""
@@ -320,7 +258,9 @@ if __name__ == "__main__":
 		sys.exit()
 	try:
 		int(sys.argv[1])
+		if int(sys.argv[1] > 159 or sys.argv[1] < 1):
+			print 'Specify the image ID as a positive integer between 1 and 159'
 	except:
-		print 'Specify the image ID as a positive integer between 1 and 186'
+		print 'Specify the image ID as a positive integer between 1 and 159'
 
 	main(sys.argv[1])

@@ -1,5 +1,10 @@
 """
 Python bash wrapper script that runs 'code.py' on each file in the Images directory
+
+Command line usage: "python loop.py id"
+                    where id is an integer ID used to write a unique .csv 
+
+Developed for ECE 5470 Fall 2017 by Jeff Witz, Curran Sinha, and Cameron Schultz
 """
 
 import subprocess
@@ -8,25 +13,24 @@ import sys
 import shutil
 
 def main():
-    #remove old scores sheet if it exists
+    #r emove old scores sheet if it exists
     try:
         os.remove('../scores.csv')
     except:
         pass
     
-    #for filename in os.listdir('../Images'):
-    # for i in range(1,186+1):
+    # run code.py on each image pair
     for i in range(1,159+1):
         try:
-            print i
+            print 'Processing image ', i
             bashCommand = 'python code.py %s' % str(i)
             process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
             output, error = process.communicate()
-            #raw_input('Process next image...')
         except KeyboardInterrupt:
             print 'Exiting...'
             break
-
+    
+    # copy temp csv to permanent unique csv
     dst = '../scores' + sys.argv[1] + '.csv'
     shutil.copyfile('../scores.csv',dst)
     sys.exit()
